@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: sigae-postgres
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-sigae_db}
+      POSTGRES_USER: ${DATABASE_USERNAME:-sigae}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-password}
+    ports:
+      - "${DATABASE_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

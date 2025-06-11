@@ -2,46 +2,69 @@ import { Injectable } from '@nestjs/common';
 import { CreateCatDto } from './dto/create-cat.dto';
 import { UpdateCatDto } from './dto/update-cat.dto';
 import { CatDto } from './dto/cat.dto';
-import { PaginationDto } from './dto/pagination.dto';
+import { Repository } from 'typeorm';
+import { Cat } from './entities/cat.entity';
+import { CatInputDto } from './dto/cat-input';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class CatsService {
 
-  constructor() {}
+  constructor(
+    @InjectRepository(Cat)
+    private readonly catRepository: Repository<Cat>) { }
 
-  create(createCatDto: CreateCatDto) {
-    return 'This action adds a new cat';
+  create(createCatDto: CreateCatDto): Promise<CatDto> {
+    const cat = this.catRepository.create(createCatDto);
+    return this.catRepository.save(cat);
   }
 
-  findAll() {
-    const cats: CatDto[] = [
-      { id: 1, name: 'Whiskers', age: 2, breed: 'Siamese'},
-      { id: 2, name: 'Mittens', age: 3, breed: 'Persian' },
-      { id: 3, name: 'Shadow', age: 1, breed: 'la' },
-    ];
+  findAll(catInputDto: CatInputDto): Promise<CatDto[]> {
+    const queryBuilder = this.catRepository.createQueryBuilder('cat');
 
-    // Simulating a pagination response
-    const pagination: PaginationDto<CatDto> = {
-      totalItems: cats.length,
-      totalPages: Math.ceil(cats.length / 10), // Assuming a page size of 10
-      currentPage: 1, // Assuming we are on the first page
-      pageSize: 10, // Assuming a page size of 10
-      items: cats, // The items for the current page
-    };
-    // Returning the cats as part of a pagination response    
-    return pagination;
+    if (catInputDto.query) {
+      queryBuilder.where('cat.name LIKE :query', { query: `%${catInputDto.query}%` });
+    }
+
+    if (catInputDto.age !== undefined) {
+      queryBuilder.andWhere('cat.age = :age', { age: catInputDto.age });
+    }
+
+    if (catInputDto.isActive !== undefined) {
+      queryBuilder.andWhere('cat.isActive = :isActive', { isActive: catInputDto.isActive });
+    }
+
+    return queryBuilder.getMany();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} cat`;
+  findOne(id: number): Promise<CatDto> {
+    return this.catRepository.findOneBy({ id })
+      .then(cat => {
+        if (!cat) {
+          throw new Error(`Cat with id ${id} not found`);
+        }
+        return cat;
+      });
   }
 
   update(id: number, updateCatDto: UpdateCatDto) {
-    return `This action updates a #${id} cat`;
+    return this.catRepository.findOneBy({ id })
+      .then(cat => {
+        if (!cat) {
+          throw new Error(`Cat with id ${id} not found`);
+        }
+        Object.assign(cat, updateCatDto);
+        return this.catRepository.save(cat);
+      });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} cat`;
+  remove(id: number): void {
+    this.catRepository.findOneBy({ id })
+      .then(cat => {
+        if (!cat) {
+          throw new Error(`Cat with id ${id} not found`);
+        }
+        return this.catRepository.remove(cat);
+      });
   }
-
 }
