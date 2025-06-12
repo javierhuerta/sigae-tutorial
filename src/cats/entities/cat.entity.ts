@@ -12,6 +12,12 @@ export class Cat {
   @Column()
   age: number;
 
+  @Column({ nullable: true })
+  breed: string;
+
+  @Column({ nullable: true })
+  image: string;
+
   @Column({ default: true })
   isActive: boolean;
 }
